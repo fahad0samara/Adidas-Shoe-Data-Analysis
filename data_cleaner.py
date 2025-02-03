@@ -17,36 +17,12 @@ def load_data(file_path, file_name):
     """Load data with error handling"""
     try:
         if not os.path.exists(file_path):
-            st.error(f"Error: {file_name} not found in the current directory.")
             return None
-            
-        # First, try to read the first few lines to check the file
-        with open(file_path, 'r', encoding='utf-8') as f:
-            first_lines = [next(f) for _ in range(5)]
-            st.write(f"First few lines of {file_name}:")
-            st.code('\n'.join(first_lines))
-            
-        # Try to read the CSV file
-        try:
-            df = pd.read_csv(file_path)
-            if df.empty:
-                st.error(f"Error: {file_name} is empty")
-                return None
-                
-            st.success(f"Successfully loaded {file_name} with {len(df)} rows and {len(df.columns)} columns")
-            st.write(f"Columns in {file_name}:", df.columns.tolist())
-            return df
-            
-        except pd.errors.EmptyDataError:
-            st.error(f"Error: {file_name} is empty")
+        df = pd.read_csv(file_path)
+        if df.empty:
             return None
-        except Exception as e:
-            st.error(f"Error reading CSV {file_name}: {str(e)}")
-            return None
-            
+        return df
     except Exception as e:
-        st.error(f"Error loading {file_name}: {str(e)}")
-        st.write("Exception type:", type(e).__name__)
         return None
 
 # Add custom CSS to improve the UI
@@ -59,50 +35,60 @@ st.markdown("""
     .st-emotion-cache-1v0mbdj {
         width: 100%;
     }
+    .element-container:has(div.stMarkdown):first-child {
+        margin-top: -4rem;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("👟 Adidas Data Analysis Dashboard")
-st.markdown("### Comprehensive Data Analysis and Insights")
-
-# Load the data with error handling
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def get_data():
-    st.info("Loading data files...")
     shoes_dim = load_data('shoes_dim.csv', 'shoes_dim.csv')
     shoes_fact = load_data('shoes_fact.csv', 'shoes_fact.csv')
     country_dim = load_data('country_dim.csv', 'country_dim.csv')
     return shoes_dim, shoes_fact, country_dim
 
+# Load data silently
 shoes_dim, shoes_fact, country_dim = get_data()
 
-# Check if data loading was successful and display data info
-if shoes_dim is not None and shoes_fact is not None and country_dim is not None:
-    st.sidebar.header("Dataset Information")
+# Check if data loading was successful
+if shoes_dim is None or shoes_fact is None or country_dim is None:
+    st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
+    st.stop()
+
+st.title("👟 Adidas Data Analysis Dashboard")
+st.markdown("### Comprehensive Data Analysis and Insights")
+
+# Display dataset information in sidebar
+with st.sidebar:
+    st.header("Dataset Information")
     
     # Display dataset shapes
-    st.sidebar.subheader("Dataset Dimensions")
-    st.sidebar.write("Shoes Dimension:", shoes_dim.shape)
-    st.sidebar.write("Shoes Facts:", shoes_fact.shape)
-    st.sidebar.write("Country Dimension:", country_dim.shape)
+    st.subheader("Dataset Dimensions")
+    cols = st.columns(2)
+    cols[0].write("Shoes Dimension")
+    cols[1].write(f"{shoes_dim.shape[0]} rows")
+    cols = st.columns(2)
+    cols[0].write("Shoes Facts")
+    cols[1].write(f"{shoes_fact.shape[0]} rows")
+    cols = st.columns(2)
+    cols[0].write("Country Dimension")
+    cols[1].write(f"{country_dim.shape[0]} rows")
     
     # Add data preview section
-    if st.sidebar.checkbox("Show Data Preview"):
-        st.sidebar.subheader("Data Preview")
-        dataset = st.sidebar.selectbox(
+    if st.checkbox("Show Data Preview"):
+        st.subheader("Data Preview")
+        dataset = st.selectbox(
             "Select Dataset",
             ["Shoes Dimension", "Shoes Facts", "Country Dimension"]
         )
         
         if dataset == "Shoes Dimension":
-            st.sidebar.dataframe(shoes_dim.head(), use_container_width=True)
+            st.dataframe(shoes_dim.head(), use_container_width=True)
         elif dataset == "Shoes Facts":
-            st.sidebar.dataframe(shoes_fact.head(), use_container_width=True)
+            st.dataframe(shoes_fact.head(), use_container_width=True)
         else:
-            st.sidebar.dataframe(country_dim.head(), use_container_width=True)
-else:
-    st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
-    st.stop()
+            st.dataframe(country_dim.head(), use_container_width=True)
 
 try:
     # Create tabs for different analyses
