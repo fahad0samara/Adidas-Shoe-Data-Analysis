@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from datetime import datetime
 import os
+import numpy as np
 
 # Set page configuration
 st.set_page_config(
@@ -38,6 +39,23 @@ st.markdown("""
     .element-container:has(div.stMarkdown):first-child {
         margin-top: -4rem;
     }
+    div[data-testid="stMetricValue"] {
+        font-size: 1.4rem;
+    }
+    div[data-testid="stMetricDelta"] {
+        font-size: 1rem;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 8px 16px;
+        border-radius: 4px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #4CAF50;
+        color: white;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,8 +74,13 @@ if shoes_dim is None or shoes_fact is None or country_dim is None:
     st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
     st.stop()
 
-st.title("👟 Adidas Data Analysis Dashboard")
-st.markdown("### Comprehensive Data Analysis and Insights")
+# Create header with logo and title
+col1, col2 = st.columns([1, 4])
+with col1:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg", width=100)
+with col2:
+    st.title("👟 Adidas Data Analysis Dashboard")
+    st.markdown("### Comprehensive Data Analysis and Insights")
 
 # Display dataset information in sidebar
 with st.sidebar:
@@ -75,6 +98,38 @@ with st.sidebar:
     cols[0].write("Country Dimension")
     cols[1].write(f"{country_dim.shape[0]} rows")
     
+    st.markdown("---")
+    
+    # Add filters
+    st.subheader("Data Filters")
+    
+    # Gender filter
+    if 'gender' in shoes_dim.columns:
+        selected_genders = st.multiselect(
+            "Gender",
+            options=sorted(shoes_dim['gender'].unique()),
+            default=sorted(shoes_dim['gender'].unique())
+        )
+    
+    # Price range filter
+    if 'price' in shoes_fact.columns:
+        price_range = st.slider(
+            "Price Range ($)",
+            min_value=float(shoes_fact['price'].min()),
+            max_value=float(shoes_fact['price'].max()),
+            value=(float(shoes_fact['price'].min()), float(shoes_fact['price'].max()))
+        )
+    
+    # Category filter
+    if 'category' in shoes_fact.columns:
+        selected_categories = st.multiselect(
+            "Category",
+            options=sorted(shoes_fact['category'].unique()),
+            default=sorted(shoes_fact['category'].unique())
+        )
+    
+    st.markdown("---")
+    
     # Add data preview section
     if st.checkbox("Show Data Preview"):
         st.subheader("Data Preview")
@@ -89,6 +144,22 @@ with st.sidebar:
             st.dataframe(shoes_fact.head(), use_container_width=True)
         else:
             st.dataframe(country_dim.head(), use_container_width=True)
+
+# Apply filters
+filtered_shoes_dim = shoes_dim.copy()
+filtered_shoes_fact = shoes_fact.copy()
+
+if 'gender' in shoes_dim.columns and selected_genders:
+    filtered_shoes_dim = filtered_shoes_dim[filtered_shoes_dim['gender'].isin(selected_genders)]
+
+if 'price' in shoes_fact.columns:
+    filtered_shoes_fact = filtered_shoes_fact[
+        (filtered_shoes_fact['price'] >= price_range[0]) &
+        (filtered_shoes_fact['price'] <= price_range[1])
+    ]
+
+if 'category' in shoes_fact.columns and selected_categories:
+    filtered_shoes_fact = filtered_shoes_fact[filtered_shoes_fact['category'].isin(selected_categories)]
 
 try:
     # Create tabs for different analyses
@@ -105,32 +176,56 @@ try:
         
         # Add summary metrics at the top
         col1, col2, col3, col4 = st.columns(4)
+        
         with col1:
-            st.metric("Total Products", len(shoes_dim))
+            total_products = len(filtered_shoes_dim)
+            delta_products = ((total_products - len(shoes_dim)) / len(shoes_dim)) * 100
+            st.metric(
+                "Total Products",
+                f"{total_products:,}",
+                f"{delta_products:.1f}% from total"
+            )
+            
         with col2:
-            st.metric("Total Countries", len(country_dim))
+            total_countries = len(country_dim)
+            st.metric("Total Countries", f"{total_countries:,}")
+            
         with col3:
-            if 'price' in shoes_fact.columns:
-                avg_price = shoes_fact['price'].mean()
-                st.metric("Average Price", f"${avg_price:.2f}")
+            if 'price' in filtered_shoes_fact.columns:
+                avg_price = filtered_shoes_fact['price'].mean()
+                overall_avg = shoes_fact['price'].mean()
+                price_delta = ((avg_price - overall_avg) / overall_avg) * 100
+                st.metric(
+                    "Average Price",
+                    f"${avg_price:.2f}",
+                    f"{price_delta:+.1f}% from overall"
+                )
+                
         with col4:
-            if 'availability' in shoes_fact.columns:
-                available = shoes_fact['availability'].sum()
-                st.metric("Available Products", available)
+            if 'availability' in filtered_shoes_fact.columns:
+                available = filtered_shoes_fact['availability'].sum()
+                total_available = shoes_fact['availability'].sum()
+                avail_delta = ((available - total_available) / total_available) * 100
+                st.metric(
+                    "Available Products",
+                    f"{available:,}",
+                    f"{avail_delta:+.1f}% from total"
+                )
         
         st.markdown("---")
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         
         with col1:
-            if 'gender' in shoes_dim.columns:
+            if 'gender' in filtered_shoes_dim.columns:
                 st.subheader("Gender Distribution")
-                gender_dist = shoes_dim['gender'].value_counts()
+                gender_dist = filtered_shoes_dim['gender'].value_counts()
                 fig_gender = px.pie(
                     values=gender_dist.values,
                     names=gender_dist.index,
                     title="Gender Distribution",
-                    hole=0.4
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Set3
                 )
                 fig_gender.update_traces(textinfo='percent+label')
                 st.plotly_chart(fig_gender, use_container_width=True)
@@ -138,56 +233,54 @@ try:
                 # Add gender statistics
                 st.markdown("**Gender Breakdown:**")
                 for gender, count in gender_dist.items():
-                    st.write(f"- {gender}: {count} ({count/len(shoes_dim)*100:.1f}%)")
-            else:
-                st.warning("Gender data not available")
-
+                    st.write(f"- {gender}: {count:,} ({count/len(filtered_shoes_dim)*100:.1f}%)")
+            
         with col2:
-            if 'best_for_wear' in shoes_dim.columns:
-                st.subheader("Usage Categories")
-                wear_dist = shoes_dim['best_for_wear'].value_counts()
-                fig_wear = px.pie(
-                    values=wear_dist.values,
-                    names=wear_dist.index,
-                    title="Usage Distribution",
-                    hole=0.4
+            if 'category' in filtered_shoes_fact.columns:
+                st.subheader("Category Distribution")
+                cat_dist = filtered_shoes_fact['category'].value_counts()
+                fig_cat = px.pie(
+                    values=cat_dist.values,
+                    names=cat_dist.index,
+                    title="Category Distribution",
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Set3
                 )
-                fig_wear.update_traces(textinfo='percent+label')
-                st.plotly_chart(fig_wear, use_container_width=True)
+                fig_cat.update_traces(textinfo='percent+label')
+                st.plotly_chart(fig_cat, use_container_width=True)
                 
-                # Add usage statistics
-                st.markdown("**Top Usage Categories:**")
-                for category, count in wear_dist.head(3).items():
-                    st.write(f"- {category}: {count} ({count/len(shoes_dim)*100:.1f}%)")
-            else:
-                st.warning("Usage category data not available")
-
-        with col3:
-            if 'dominant_color' in shoes_dim.columns:
-                st.subheader("Color Analysis")
-                color_dist = shoes_dim['dominant_color'].value_counts().head(10)
-                fig_color = px.bar(
-                    x=color_dist.index,
-                    y=color_dist.values,
-                    title="Top 10 Dominant Colors",
-                    labels={'x': 'Color', 'y': 'Count'}
-                )
-                fig_color.update_layout(showlegend=False)
-                st.plotly_chart(fig_color, use_container_width=True)
-                
-                # Add color statistics
-                st.markdown("**Color Insights:**")
-                st.write(f"- Total colors: {shoes_dim['dominant_color'].nunique()}")
-                st.write(f"- Most common: {color_dist.index[0]} ({color_dist.values[0]} products)")
-            else:
-                st.warning("Color data not available")
+                # Add category statistics
+                st.markdown("**Category Breakdown:**")
+                for cat, count in cat_dist.items():
+                    st.write(f"- {cat}: {count:,} ({count/len(filtered_shoes_fact)*100:.1f}%)")
+        
+        st.markdown("---")
+        
+        # Time series analysis if date is available
+        if 'date' in filtered_shoes_fact.columns:
+            st.subheader("Products Over Time")
+            
+            # Convert date to datetime if it's not already
+            filtered_shoes_fact['date'] = pd.to_datetime(filtered_shoes_fact['date'])
+            
+            # Group by date and count products
+            daily_products = filtered_shoes_fact.groupby('date').size().reset_index(name='count')
+            
+            fig_time = px.line(
+                daily_products,
+                x='date',
+                y='count',
+                title="Daily Product Count",
+                labels={'count': 'Number of Products', 'date': 'Date'}
+            )
+            st.plotly_chart(fig_time, use_container_width=True)
 
     with tab2:
         st.header("Data Quality Analysis")
         
         # Missing values analysis
-        missing_shoes = shoes_dim.isnull().sum()
-        missing_pct_shoes = (missing_shoes / len(shoes_dim)) * 100
+        missing_shoes = filtered_shoes_dim.isnull().sum()
+        missing_pct_shoes = (missing_shoes / len(filtered_shoes_dim)) * 100
         
         col1, col2 = st.columns(2)
         
@@ -200,7 +293,7 @@ try:
             st.dataframe(missing_df, use_container_width=True)
             
             # Data completeness score
-            completeness = (1 - missing_shoes.sum() / (len(shoes_dim) * len(shoes_dim.columns))) * 100
+            completeness = (1 - missing_shoes.sum() / (len(filtered_shoes_dim) * len(filtered_shoes_dim.columns))) * 100
             st.metric("Data Completeness Score", f"{completeness:.2f}%")
 
         with col2:
@@ -213,13 +306,13 @@ try:
 
         # Duplicate analysis
         st.subheader("Duplicate Analysis")
-        duplicates = shoes_dim.duplicated().sum()
+        duplicates = filtered_shoes_dim.duplicated().sum()
         st.metric("Duplicate Records", duplicates)
         
         # Data consistency check
         st.subheader("Data Consistency Check")
-        if 'gender' in shoes_dim.columns:
-            invalid_gender = shoes_dim[~shoes_dim['gender'].isin(['M', 'W', 'U', 'K'])]['gender'].unique()
+        if 'gender' in filtered_shoes_dim.columns:
+            invalid_gender = filtered_shoes_dim[~filtered_shoes_dim['gender'].isin(['M', 'W', 'U', 'K'])]['gender'].unique()
             st.write("Invalid gender values:", invalid_gender if len(invalid_gender) > 0 else "None")
         else:
             st.warning("Gender data not available for consistency check")
@@ -227,13 +320,13 @@ try:
     with tab3:
         st.header("Price Analysis")
         
-        if 'price' in shoes_fact.columns:
+        if 'price' in filtered_shoes_fact.columns:
             col1, col2 = st.columns(2)
             
             with col1:
                 # Price distribution
                 fig_price = px.histogram(
-                    shoes_fact,
+                    filtered_shoes_fact,
                     x='price',
                     title="Price Distribution",
                     nbins=30
@@ -242,12 +335,12 @@ try:
                 
                 # Price statistics
                 st.write("Price Statistics:")
-                st.dataframe(shoes_fact['price'].describe().round(2), use_container_width=True)
+                st.dataframe(filtered_shoes_fact['price'].describe().round(2), use_container_width=True)
 
             with col2:
                 # Price by category
-                if 'category' in shoes_fact.columns:
-                    avg_price_cat = shoes_fact.groupby('category')['price'].mean().sort_values(ascending=False)
+                if 'category' in filtered_shoes_fact.columns:
+                    avg_price_cat = filtered_shoes_fact.groupby('category')['price'].mean().sort_values(ascending=False)
                     fig_price_cat = px.bar(
                         x=avg_price_cat.index,
                         y=avg_price_cat.values,
@@ -297,8 +390,8 @@ try:
         col1, col2 = st.columns(2)
         
         with col1:
-            if 'gender' in shoes_dim.columns and 'best_for_wear' in shoes_dim.columns:
-                gender_usage = pd.crosstab(shoes_dim['gender'], shoes_dim['best_for_wear'])
+            if 'gender' in filtered_shoes_dim.columns and 'best_for_wear' in filtered_shoes_dim.columns:
+                gender_usage = pd.crosstab(filtered_shoes_dim['gender'], filtered_shoes_dim['best_for_wear'])
                 fig_gender_usage = px.bar(
                     gender_usage,
                     title="Gender Mix by Usage Category",
@@ -309,8 +402,8 @@ try:
                 st.warning("Gender or usage category data not available")
 
         with col2:
-            if 'dominant_color' in shoes_dim.columns and 'gender' in shoes_dim.columns:
-                color_gender = pd.crosstab(shoes_dim['dominant_color'], shoes_dim['gender'])
+            if 'dominant_color' in filtered_shoes_dim.columns and 'gender' in filtered_shoes_dim.columns:
+                color_gender = pd.crosstab(filtered_shoes_dim['dominant_color'], filtered_shoes_dim['gender'])
                 fig_color_gender = px.bar(
                     color_gender.head(10),
                     title="Top 10 Colors by Gender",
@@ -322,8 +415,8 @@ try:
 
         # Trend analysis
         st.subheader("Product Categories Over Time")
-        if 'release_date' in shoes_dim.columns and 'best_for_wear' in shoes_dim.columns:
-            timeline = shoes_dim.groupby(['release_date', 'best_for_wear']).size().reset_index(name='count')
+        if 'release_date' in filtered_shoes_dim.columns and 'best_for_wear' in filtered_shoes_dim.columns:
+            timeline = filtered_shoes_dim.groupby(['release_date', 'best_for_wear']).size().reset_index(name='count')
             fig_timeline = px.line(
                 timeline,
                 x='release_date',
