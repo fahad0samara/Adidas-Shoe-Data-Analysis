@@ -19,7 +19,25 @@ def load_data(file_path, file_name):
         if not os.path.exists(file_path):
             st.error(f"Error: {file_name} not found in the current directory.")
             return None
-        return pd.read_csv(file_path)
+            
+        # Try different encodings
+        encodings = ['utf-8', 'latin1', 'iso-8859-1']
+        for encoding in encodings:
+            try:
+                df = pd.read_csv(file_path, encoding=encoding, index_col=0)
+                if not df.empty:
+                    st.success(f"Successfully loaded {file_name}")
+                    return df
+            except UnicodeDecodeError:
+                continue
+            except pd.errors.EmptyDataError:
+                st.error(f"Error: {file_name} is empty")
+                return None
+            except Exception as e:
+                continue
+                
+        st.error(f"Error: Could not read {file_name} with any of the attempted encodings")
+        return None
     except Exception as e:
         st.error(f"Error loading {file_name}: {str(e)}")
         return None
@@ -43,6 +61,7 @@ st.markdown("### Comprehensive Data Analysis and Insights")
 # Load the data with error handling
 @st.cache_data
 def get_data():
+    st.info("Loading data files...")
     shoes_dim = load_data('shoes_dim.csv', 'shoes_dim.csv')
     shoes_fact = load_data('shoes_fact.csv', 'shoes_fact.csv')
     country_dim = load_data('country_dim.csv', 'country_dim.csv')
