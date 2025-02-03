@@ -1,106 +1,129 @@
 # 👟 Adidas Shoe Data Analysis
 
-This project provides comprehensive analysis tools for Adidas shoe data, including interactive visualizations, data quality checks, and market insights.
+![Adidas Logo](https://raw.githubusercontent.com/fahad0samara/Adidas-Shoe-Data-Analysis/main/assets/adidas-logo.png)
+
+A comprehensive data analysis project exploring Adidas shoe data with interactive visualizations and insights.
+
+## 🌟 Live Demo
+[View Live Dashboard](https://adidas-shoe-analysis.streamlit.app)
 
 ## 📊 Features
 
-- **Interactive Dashboard** (`adidas_analyzer.py`)
-  - Basic shoe statistics
-  - Gender and category distributions
-  - Color analysis
-  - Geographic insights
+### 1. Interactive Dashboards
+- Real-time data filtering and visualization
+- Dynamic charts and graphs
+- User-friendly interface
 
-- **Data Quality Analysis** (`data_cleaner.py`)
-  - Missing value detection
-  - Data completeness scoring
-  - Duplicate record identification
-  - Data consistency checks
+### 2. Data Analysis Tools
+- **Statistical Analysis**: Comprehensive shoe data statistics
+- **Market Insights**: Gender, category, and color distributions
+- **Geographic Analysis**: Regional preferences and market presence
 
-- **Jupyter Notebook Analysis** (`adidas_analysis.ipynb`)
-  - Detailed data exploration
-  - Statistical analysis
-  - Visual insights
-  - Cross-category analysis
+### 3. Visualization Components
+- Interactive charts using Plotly
+- Beautiful data presentations
+- Easy-to-understand insights
 
-## 🛠️ Installation
+## 🛠️ Technology Stack
+- Python 3.8+
+- Streamlit
+- Pandas
+- Plotly
+- Jupyter Notebook
+- Seaborn & Matplotlib
 
-1. Clone this repository:
+## 📋 Installation
+
+1. Clone the repository:
 ```bash
-git clone https://github.com/[your-username]/adidas-shoe-analysis.git
-cd adidas-shoe-analysis
+git clone https://github.com/fahad0samara/Adidas-Shoe-Data-Analysis.git
+cd Adidas-Shoe-Data-Analysis
 ```
 
-2. Install required packages:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## 📋 Data Files
-
-The project uses three main data files:
-- `shoes_dim.csv`: Shoe dimension data (features, categories, colors)
-- `shoes_fact.csv`: Shoe facts and metrics
-- `country_dim.csv`: Country-specific information
-
 ## 🚀 Usage
 
-### Interactive Dashboard
-Run the Streamlit dashboard:
+### 1. Interactive Dashboard
 ```bash
 streamlit run adidas_analyzer.py
 ```
 
-### Data Quality Analysis
-Run the data quality checker:
+### 2. Data Quality Analysis
 ```bash
 streamlit run data_cleaner.py
 ```
 
-### Jupyter Notebook
-Launch Jupyter and open `adidas_analysis.ipynb`:
+### 3. Jupyter Notebook Analysis
 ```bash
 jupyter notebook adidas_analysis.ipynb
 ```
 
-## 📈 Analysis Features
+## 📊 Data Structure
 
-1. **Basic Statistics**
-   - Total product count
-   - Gender distribution
-   - Usage categories
-   - Color variations
+### Datasets:
+1. `shoes_dim.csv`: 
+   - Shoe characteristics
+   - Categories
+   - Colors and styles
 
-2. **Data Quality**
-   - Missing value analysis
-   - Completeness scoring
-   - Duplicate detection
-   - Consistency checks
+2. `shoes_fact.csv`:
+   - Sales data
+   - Metrics
+   - Performance indicators
 
-3. **Price Analysis**
-   - Price distribution
-   - Category-wise pricing
-   - Price trends
-
-4. **Geographic Analysis**
-   - Country distribution
-   - Currency analysis
+3. `country_dim.csv`:
+   - Geographic information
+   - Currency data
    - Regional preferences
 
-5. **Market Insights**
-   - Product mix analysis
-   - Gender preferences
-   - Color popularity
-   - Category trends
+## 📈 Analysis Features
+
+### 1. Basic Statistics
+- Total product inventory
+- Gender distribution
+- Category breakdown
+- Color variations
+
+### 2. Data Quality
+- Missing value analysis
+- Completeness scoring
+- Duplicate detection
+- Data consistency checks
+
+### 3. Market Analysis
+- Price distribution
+- Category-wise analysis
+- Geographic trends
+- Consumer preferences
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 👤 Author
 
-- Data source: Adidas Webstore
-- Built with Python, Pandas, Streamlit, and Plotly
+**Fahad Samara**
+- GitHub: [@fahad0samara](https://github.com/fahad0samara)
+- LinkedIn: [Fahad Samara](https://linkedin.com/in/fahad-samara)
+
+## 🌟 Show your support
+
+Give a ⭐️ if this project helped you!
+
+## 📝 Notes
+
+- Data is sourced from the Adidas Webstore
+- Updated regularly for accuracy
+- Contributions and feedback welcome!
