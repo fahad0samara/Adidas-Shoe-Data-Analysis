@@ -61,7 +61,6 @@ st.markdown("### Comprehensive Data Analysis and Insights")
 # Load the data with error handling
 @st.cache_data
 def get_data():
-    st.info("Loading data files...")
     shoes_dim = load_data('shoes_dim.csv', 'shoes_dim.csv')
     shoes_fact = load_data('shoes_fact.csv', 'shoes_fact.csv')
     country_dim = load_data('country_dim.csv', 'country_dim.csv')
@@ -73,6 +72,27 @@ shoes_dim, shoes_fact, country_dim = get_data()
 if shoes_dim is None or shoes_fact is None or country_dim is None:
     st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
     st.stop()
+
+# Display basic information about the loaded data
+st.sidebar.header("Dataset Information")
+st.sidebar.write("Shoes Dimension:", shoes_dim.shape)
+st.sidebar.write("Shoes Facts:", shoes_fact.shape)
+st.sidebar.write("Country Dimension:", country_dim.shape)
+
+# Add data preview section
+if st.sidebar.checkbox("Show Data Preview"):
+    st.sidebar.subheader("Data Preview")
+    dataset = st.sidebar.selectbox(
+        "Select Dataset",
+        ["Shoes Dimension", "Shoes Facts", "Country Dimension"]
+    )
+    
+    if dataset == "Shoes Dimension":
+        st.sidebar.dataframe(shoes_dim.head(), use_container_width=True)
+    elif dataset == "Shoes Facts":
+        st.sidebar.dataframe(shoes_fact.head(), use_container_width=True)
+    else:
+        st.sidebar.dataframe(country_dim.head(), use_container_width=True)
 
 try:
     # Create tabs for different analyses
@@ -87,50 +107,82 @@ try:
     with tab1:
         st.header("Basic Statistics")
         
+        # Add summary metrics at the top
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Products", len(shoes_dim))
+        with col2:
+            st.metric("Total Countries", len(country_dim))
+        with col3:
+            if 'price' in shoes_fact.columns:
+                avg_price = shoes_fact['price'].mean()
+                st.metric("Average Price", f"${avg_price:.2f}")
+        with col4:
+            if 'availability' in shoes_fact.columns:
+                available = shoes_fact['availability'].sum()
+                st.metric("Available Products", available)
+        
+        st.markdown("---")
+        
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Total Unique Shoes", len(shoes_dim))
-            
-            # Gender distribution
             if 'gender' in shoes_dim.columns:
+                st.subheader("Gender Distribution")
                 gender_dist = shoes_dim['gender'].value_counts()
                 fig_gender = px.pie(
                     values=gender_dist.values,
                     names=gender_dist.index,
-                    title="Gender Distribution"
+                    title="Gender Distribution",
+                    hole=0.4
                 )
+                fig_gender.update_traces(textinfo='percent+label')
                 st.plotly_chart(fig_gender, use_container_width=True)
+                
+                # Add gender statistics
+                st.markdown("**Gender Breakdown:**")
+                for gender, count in gender_dist.items():
+                    st.write(f"- {gender}: {count} ({count/len(shoes_dim)*100:.1f}%)")
             else:
                 st.warning("Gender data not available")
 
         with col2:
             if 'best_for_wear' in shoes_dim.columns:
-                st.metric("Usage Categories", shoes_dim['best_for_wear'].nunique())
-                
-                # Usage distribution
+                st.subheader("Usage Categories")
                 wear_dist = shoes_dim['best_for_wear'].value_counts()
                 fig_wear = px.pie(
                     values=wear_dist.values,
                     names=wear_dist.index,
-                    title="Usage Distribution"
+                    title="Usage Distribution",
+                    hole=0.4
                 )
+                fig_wear.update_traces(textinfo='percent+label')
                 st.plotly_chart(fig_wear, use_container_width=True)
+                
+                # Add usage statistics
+                st.markdown("**Top Usage Categories:**")
+                for category, count in wear_dist.head(3).items():
+                    st.write(f"- {category}: {count} ({count/len(shoes_dim)*100:.1f}%)")
             else:
                 st.warning("Usage category data not available")
 
         with col3:
             if 'dominant_color' in shoes_dim.columns:
-                st.metric("Color Variations", shoes_dim['dominant_color'].nunique())
-                
-                # Color distribution
+                st.subheader("Color Analysis")
                 color_dist = shoes_dim['dominant_color'].value_counts().head(10)
                 fig_color = px.bar(
                     x=color_dist.index,
                     y=color_dist.values,
-                    title="Top 10 Dominant Colors"
+                    title="Top 10 Dominant Colors",
+                    labels={'x': 'Color', 'y': 'Count'}
                 )
+                fig_color.update_layout(showlegend=False)
                 st.plotly_chart(fig_color, use_container_width=True)
+                
+                # Add color statistics
+                st.markdown("**Color Insights:**")
+                st.write(f"- Total colors: {shoes_dim['dominant_color'].nunique()}")
+                st.write(f"- Most common: {color_dist.index[0]} ({color_dist.values[0]} products)")
             else:
                 st.warning("Color data not available")
 
