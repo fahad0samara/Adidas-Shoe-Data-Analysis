@@ -1,11 +1,9 @@
 # 👟 Adidas Shoe Data Analysis
 
-![Adidas Logo](https://raw.githubusercontent.com/fahad0samara/Adidas-Shoe-Data-Analysis/main/assets/adidas-logo.png)
 
 A comprehensive data analysis project exploring Adidas shoe data with interactive visualizations and insights.
 
-## 🌟 Live Demo
-[View Live Dashboard](https://adidas-shoe-analysis.streamlit.app)
+
 
 ## 📊 Features
 
