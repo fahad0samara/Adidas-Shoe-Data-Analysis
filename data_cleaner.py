@@ -260,20 +260,84 @@ try:
         if 'date' in filtered_shoes_fact.columns:
             st.subheader("Products Over Time")
             
-            # Convert date to datetime if it's not already
-            filtered_shoes_fact['date'] = pd.to_datetime(filtered_shoes_fact['date'])
-            
-            # Group by date and count products
-            daily_products = filtered_shoes_fact.groupby('date').size().reset_index(name='count')
-            
-            fig_time = px.line(
-                daily_products,
-                x='date',
-                y='count',
-                title="Daily Product Count",
-                labels={'count': 'Number of Products', 'date': 'Date'}
-            )
-            st.plotly_chart(fig_time, use_container_width=True)
+            try:
+                # Convert date to datetime with European format (day first)
+                filtered_shoes_fact['date'] = pd.to_datetime(
+                    filtered_shoes_fact['date'],
+                    format='%d/%m/%Y',
+                    dayfirst=True
+                )
+                
+                # Group by date and count products
+                daily_products = filtered_shoes_fact.groupby('date').size().reset_index(name='count')
+                daily_products = daily_products.sort_values('date')
+                
+                # Create time series plot
+                fig_time = px.line(
+                    daily_products,
+                    x='date',
+                    y='count',
+                    title="Daily Product Count",
+                    labels={'count': 'Number of Products', 'date': 'Date'}
+                )
+                
+                # Customize the layout
+                fig_time.update_layout(
+                    xaxis=dict(
+                        title="Date",
+                        tickformat="%d %b %Y",
+                        tickangle=45,
+                        gridcolor='lightgray'
+                    ),
+                    yaxis=dict(
+                        title="Number of Products",
+                        gridcolor='lightgray'
+                    ),
+                    plot_bgcolor='white'
+                )
+                
+                # Add range selector
+                fig_time.update_xaxes(
+                    rangeslider_visible=True,
+                    rangeselector=dict(
+                        buttons=list([
+                            dict(count=7, label="1w", step="day", stepmode="backward"),
+                            dict(count=1, label="1m", step="month", stepmode="backward"),
+                            dict(count=3, label="3m", step="month", stepmode="backward"),
+                            dict(step="all")
+                        ])
+                    )
+                )
+                
+                st.plotly_chart(fig_time, use_container_width=True)
+                
+                # Add summary statistics
+                st.markdown("**Time Series Statistics:**")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(
+                        "Average Daily Products",
+                        f"{daily_products['count'].mean():.0f}"
+                    )
+                
+                with col2:
+                    st.metric(
+                        "Maximum Daily Products",
+                        f"{daily_products['count'].max():.0f}"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Total Days",
+                        f"{len(daily_products):,}"
+                    )
+                
+            except Exception as e:
+                st.error(f"Error processing time series data: {str(e)}")
+                st.info("Please check the date format in your data.")
+        else:
+            st.warning("Date information not available in the dataset")
 
     with tab2:
         st.header("Data Quality Analysis")
