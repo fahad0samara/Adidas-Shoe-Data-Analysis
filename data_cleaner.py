@@ -261,11 +261,10 @@ try:
             st.subheader("Products Over Time")
             
             try:
-                # Convert date to datetime with European format (day first)
+                # Convert date to datetime using ISO format
                 filtered_shoes_fact['date'] = pd.to_datetime(
                     filtered_shoes_fact['date'],
-                    format='%d/%m/%Y',
-                    dayfirst=True
+                    format='%Y-%m-%d'  # ISO format YYYY-MM-DD
                 )
                 
                 # Group by date and count products
@@ -285,7 +284,7 @@ try:
                 fig_time.update_layout(
                     xaxis=dict(
                         title="Date",
-                        tickformat="%d %b %Y",
+                        tickformat="%Y-%m-%d",
                         tickangle=45,
                         gridcolor='lightgray'
                     ),
@@ -332,6 +331,40 @@ try:
                         "Total Days",
                         f"{len(daily_products):,}"
                     )
+                
+                # Add trend analysis
+                if len(daily_products) > 1:
+                    st.markdown("**Trend Analysis:**")
+                    # Calculate rolling average
+                    daily_products['7_day_avg'] = daily_products['count'].rolling(window=7).mean()
+                    
+                    fig_trend = px.line(
+                        daily_products,
+                        x='date',
+                        y=['count', '7_day_avg'],
+                        title="Product Count with 7-Day Moving Average",
+                        labels={
+                            'count': 'Daily Count',
+                            '7_day_avg': '7-Day Average',
+                            'date': 'Date',
+                            'value': 'Number of Products'
+                        }
+                    )
+                    fig_trend.update_layout(
+                        xaxis=dict(
+                            title="Date",
+                            tickformat="%Y-%m-%d",
+                            tickangle=45,
+                            gridcolor='lightgray'
+                        ),
+                        yaxis=dict(
+                            title="Number of Products",
+                            gridcolor='lightgray'
+                        ),
+                        plot_bgcolor='white',
+                        legend_title="Metric"
+                    )
+                    st.plotly_chart(fig_trend, use_container_width=True)
                 
             except Exception as e:
                 st.error(f"Error processing time series data: {str(e)}")
