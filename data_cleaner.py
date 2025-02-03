@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from datetime import datetime
+import os
 
 # Set page configuration
 st.set_page_config(
@@ -11,16 +12,34 @@ st.set_page_config(
     layout="wide"
 )
 
+# Configure Streamlit to handle errors gracefully
+st.set_option('deprecation.showfileUploaderEncoding', False)
+
+def load_data(file_path, file_name):
+    """Load data with error handling"""
+    try:
+        if not os.path.exists(file_path):
+            st.error(f"Error: {file_name} not found in the current directory.")
+            return None
+        return pd.read_csv(file_path)
+    except Exception as e:
+        st.error(f"Error loading {file_name}: {str(e)}")
+        return None
+
 st.title("👟 Adidas Data Analysis Dashboard")
 st.markdown("### Comprehensive Data Analysis and Insights")
 
-# Load the data
-try:
-    # Load all datasets
-    shoes_dim = pd.read_csv('shoes_dim.csv')
-    country_dim = pd.read_csv('country_dim.csv')
-    shoes_fact = pd.read_csv('shoes_fact.csv')
+# Load the data with error handling
+shoes_dim = load_data('shoes_dim.csv', 'shoes_dim.csv')
+shoes_fact = load_data('shoes_fact.csv', 'shoes_fact.csv')
+country_dim = load_data('country_dim.csv', 'country_dim.csv')
 
+# Check if data loading was successful
+if shoes_dim is None or shoes_fact is None or country_dim is None:
+    st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
+    st.stop()
+
+try:
     # Create tabs for different analyses
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Basic Statistics", 
@@ -39,37 +58,46 @@ try:
             st.metric("Total Unique Shoes", len(shoes_dim))
             
             # Gender distribution
-            gender_dist = shoes_dim['gender'].value_counts()
-            fig_gender = px.pie(
-                values=gender_dist.values,
-                names=gender_dist.index,
-                title="Gender Distribution"
-            )
-            st.plotly_chart(fig_gender)
+            if 'gender' in shoes_dim.columns:
+                gender_dist = shoes_dim['gender'].value_counts()
+                fig_gender = px.pie(
+                    values=gender_dist.values,
+                    names=gender_dist.index,
+                    title="Gender Distribution"
+                )
+                st.plotly_chart(fig_gender, use_container_width=True)
+            else:
+                st.warning("Gender data not available")
 
         with col2:
-            st.metric("Usage Categories", shoes_dim['best_for_wear'].nunique())
-            
-            # Usage distribution
-            wear_dist = shoes_dim['best_for_wear'].value_counts()
-            fig_wear = px.pie(
-                values=wear_dist.values,
-                names=wear_dist.index,
-                title="Usage Distribution"
-            )
-            st.plotly_chart(fig_wear)
+            if 'best_for_wear' in shoes_dim.columns:
+                st.metric("Usage Categories", shoes_dim['best_for_wear'].nunique())
+                
+                # Usage distribution
+                wear_dist = shoes_dim['best_for_wear'].value_counts()
+                fig_wear = px.pie(
+                    values=wear_dist.values,
+                    names=wear_dist.index,
+                    title="Usage Distribution"
+                )
+                st.plotly_chart(fig_wear, use_container_width=True)
+            else:
+                st.warning("Usage category data not available")
 
         with col3:
-            st.metric("Color Variations", shoes_dim['dominant_color'].nunique())
-            
-            # Color distribution
-            color_dist = shoes_dim['dominant_color'].value_counts().head(10)
-            fig_color = px.bar(
-                x=color_dist.index,
-                y=color_dist.values,
-                title="Top 10 Dominant Colors"
-            )
-            st.plotly_chart(fig_color)
+            if 'dominant_color' in shoes_dim.columns:
+                st.metric("Color Variations", shoes_dim['dominant_color'].nunique())
+                
+                # Color distribution
+                color_dist = shoes_dim['dominant_color'].value_counts().head(10)
+                fig_color = px.bar(
+                    x=color_dist.index,
+                    y=color_dist.values,
+                    title="Top 10 Dominant Colors"
+                )
+                st.plotly_chart(fig_color, use_container_width=True)
+            else:
+                st.warning("Color data not available")
 
     with tab2:
         st.header("Data Quality Analysis")
@@ -82,10 +110,11 @@ try:
         
         with col1:
             st.subheader("Missing Values Summary")
-            st.write(pd.DataFrame({
+            missing_df = pd.DataFrame({
                 'Missing Count': missing_shoes,
                 'Missing Percentage': missing_pct_shoes.round(2)
-            }))
+            })
+            st.dataframe(missing_df, use_container_width=True)
             
             # Data completeness score
             completeness = (1 - missing_shoes.sum() / (len(shoes_dim) * len(shoes_dim.columns))) * 100
@@ -97,7 +126,7 @@ try:
                 y=missing_shoes.values,
                 title="Missing Values by Column"
             )
-            st.plotly_chart(fig)
+            st.plotly_chart(fig, use_container_width=True)
 
         # Duplicate analysis
         st.subheader("Duplicate Analysis")
@@ -106,8 +135,11 @@ try:
         
         # Data consistency check
         st.subheader("Data Consistency Check")
-        invalid_gender = shoes_dim[~shoes_dim['gender'].isin(['M', 'W', 'U', 'K'])]['gender'].unique()
-        st.write("Invalid gender values:", invalid_gender if len(invalid_gender) > 0 else "None")
+        if 'gender' in shoes_dim.columns:
+            invalid_gender = shoes_dim[~shoes_dim['gender'].isin(['M', 'W', 'U', 'K'])]['gender'].unique()
+            st.write("Invalid gender values:", invalid_gender if len(invalid_gender) > 0 else "None")
+        else:
+            st.warning("Gender data not available for consistency check")
 
     with tab3:
         st.header("Price Analysis")
@@ -168,25 +200,31 @@ try:
         
         with col1:
             # Gender mix by usage
-            gender_usage = pd.crosstab(shoes_dim['gender'], shoes_dim['best_for_wear'])
-            fig_gender_usage = px.bar(
-                gender_usage,
-                title="Gender Mix by Usage Category"
-            )
-            st.plotly_chart(fig_gender_usage)
+            if 'gender' in shoes_dim.columns and 'best_for_wear' in shoes_dim.columns:
+                gender_usage = pd.crosstab(shoes_dim['gender'], shoes_dim['best_for_wear'])
+                fig_gender_usage = px.bar(
+                    gender_usage,
+                    title="Gender Mix by Usage Category"
+                )
+                st.plotly_chart(fig_gender_usage)
+            else:
+                st.warning("Gender or usage category data not available")
 
         with col2:
             # Color popularity by gender
-            color_gender = pd.crosstab(shoes_dim['dominant_color'], shoes_dim['gender'])
-            fig_color_gender = px.bar(
-                color_gender.head(10),
-                title="Top 10 Colors by Gender"
-            )
-            st.plotly_chart(fig_color_gender)
+            if 'dominant_color' in shoes_dim.columns and 'gender' in shoes_dim.columns:
+                color_gender = pd.crosstab(shoes_dim['dominant_color'], shoes_dim['gender'])
+                fig_color_gender = px.bar(
+                    color_gender.head(10),
+                    title="Top 10 Colors by Gender"
+                )
+                st.plotly_chart(fig_color_gender)
+            else:
+                st.warning("Color or gender data not available")
 
         # Trend analysis
         st.subheader("Product Categories Over Time")
-        if 'release_date' in shoes_dim.columns:
+        if 'release_date' in shoes_dim.columns and 'best_for_wear' in shoes_dim.columns:
             timeline = shoes_dim.groupby(['release_date', 'best_for_wear']).size().reset_index(name='count')
             fig_timeline = px.line(
                 timeline,
@@ -196,7 +234,9 @@ try:
                 title="Product Categories Timeline"
             )
             st.plotly_chart(fig_timeline)
+        else:
+            st.warning("Release date or usage category data not available")
 
 except Exception as e:
-    st.error(f"Error loading or processing data: {str(e)}")
-    st.info("Please make sure all data files (shoes_dim.csv, shoes_fact.csv, country_dim.csv) are in the same directory as this script.")
+    st.error(f"An error occurred while processing the data: {str(e)}")
+    st.info("Please check the data format and try again.")
