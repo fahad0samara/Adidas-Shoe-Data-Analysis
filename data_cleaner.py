@@ -20,26 +20,33 @@ def load_data(file_path, file_name):
             st.error(f"Error: {file_name} not found in the current directory.")
             return None
             
-        # Try different encodings
-        encodings = ['utf-8', 'latin1', 'iso-8859-1']
-        for encoding in encodings:
-            try:
-                df = pd.read_csv(file_path, encoding=encoding, index_col=0)
-                if not df.empty:
-                    st.success(f"Successfully loaded {file_name}")
-                    return df
-            except UnicodeDecodeError:
-                continue
-            except pd.errors.EmptyDataError:
+        # First, try to read the first few lines to check the file
+        with open(file_path, 'r', encoding='utf-8') as f:
+            first_lines = [next(f) for _ in range(5)]
+            st.write(f"First few lines of {file_name}:")
+            st.code('\n'.join(first_lines))
+            
+        # Try to read the CSV file
+        try:
+            df = pd.read_csv(file_path)
+            if df.empty:
                 st.error(f"Error: {file_name} is empty")
                 return None
-            except Exception as e:
-                continue
                 
-        st.error(f"Error: Could not read {file_name} with any of the attempted encodings")
-        return None
+            st.success(f"Successfully loaded {file_name} with {len(df)} rows and {len(df.columns)} columns")
+            st.write(f"Columns in {file_name}:", df.columns.tolist())
+            return df
+            
+        except pd.errors.EmptyDataError:
+            st.error(f"Error: {file_name} is empty")
+            return None
+        except Exception as e:
+            st.error(f"Error reading CSV {file_name}: {str(e)}")
+            return None
+            
     except Exception as e:
         st.error(f"Error loading {file_name}: {str(e)}")
+        st.write("Exception type:", type(e).__name__)
         return None
 
 # Add custom CSS to improve the UI
@@ -61,6 +68,7 @@ st.markdown("### Comprehensive Data Analysis and Insights")
 # Load the data with error handling
 @st.cache_data
 def get_data():
+    st.info("Loading data files...")
     shoes_dim = load_data('shoes_dim.csv', 'shoes_dim.csv')
     shoes_fact = load_data('shoes_fact.csv', 'shoes_fact.csv')
     country_dim = load_data('country_dim.csv', 'country_dim.csv')
@@ -68,31 +76,33 @@ def get_data():
 
 shoes_dim, shoes_fact, country_dim = get_data()
 
-# Check if data loading was successful
-if shoes_dim is None or shoes_fact is None or country_dim is None:
+# Check if data loading was successful and display data info
+if shoes_dim is not None and shoes_fact is not None and country_dim is not None:
+    st.sidebar.header("Dataset Information")
+    
+    # Display dataset shapes
+    st.sidebar.subheader("Dataset Dimensions")
+    st.sidebar.write("Shoes Dimension:", shoes_dim.shape)
+    st.sidebar.write("Shoes Facts:", shoes_fact.shape)
+    st.sidebar.write("Country Dimension:", country_dim.shape)
+    
+    # Add data preview section
+    if st.sidebar.checkbox("Show Data Preview"):
+        st.sidebar.subheader("Data Preview")
+        dataset = st.sidebar.selectbox(
+            "Select Dataset",
+            ["Shoes Dimension", "Shoes Facts", "Country Dimension"]
+        )
+        
+        if dataset == "Shoes Dimension":
+            st.sidebar.dataframe(shoes_dim.head(), use_container_width=True)
+        elif dataset == "Shoes Facts":
+            st.sidebar.dataframe(shoes_fact.head(), use_container_width=True)
+        else:
+            st.sidebar.dataframe(country_dim.head(), use_container_width=True)
+else:
     st.error("Failed to load one or more required datasets. Please ensure all data files are present in the correct location.")
     st.stop()
-
-# Display basic information about the loaded data
-st.sidebar.header("Dataset Information")
-st.sidebar.write("Shoes Dimension:", shoes_dim.shape)
-st.sidebar.write("Shoes Facts:", shoes_fact.shape)
-st.sidebar.write("Country Dimension:", country_dim.shape)
-
-# Add data preview section
-if st.sidebar.checkbox("Show Data Preview"):
-    st.sidebar.subheader("Data Preview")
-    dataset = st.sidebar.selectbox(
-        "Select Dataset",
-        ["Shoes Dimension", "Shoes Facts", "Country Dimension"]
-    )
-    
-    if dataset == "Shoes Dimension":
-        st.sidebar.dataframe(shoes_dim.head(), use_container_width=True)
-    elif dataset == "Shoes Facts":
-        st.sidebar.dataframe(shoes_fact.head(), use_container_width=True)
-    else:
-        st.sidebar.dataframe(country_dim.head(), use_container_width=True)
 
 try:
     # Create tabs for different analyses
